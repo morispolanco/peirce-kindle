@@ -80,7 +80,7 @@ with st.sidebar:
         "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
         "GPT-4o Mini": "openai/gpt-4o-mini",
         "GLM 5.1 (Z-AI)": "z-ai/glm-5.1",
-        "MoonshotAI": "moonshotai/kimi-k2.6",
+        "Kimi-k2.6": "moonshotai/kimi-k2.6",
         "Llama 3.1 405B": "meta-llama/llama-3.1-405b"
     }
     
