@@ -3,23 +3,38 @@ import requests
 import json
 import time
 
-# Configuración de la página y estética
-st.set_page_config(page_title="Escritor Editorial Pro", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(
+    page_title="Escritor Editorial Pro | KDP",
+    page_icon="🖋️",
+    layout="wide"
+)
 
-st.markdown("""
+# --- ESTILOS CSS CORREGIDOS ---
+st.markdown(
+    """
     <style>
-    .main { background-color: #f5f5f5; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #1e1e1e; color: white; }
+    .main { background-color: #f9f9f9; }
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 8px; 
+        height: 3.5em; 
+        background-color: #2c3e50; 
+        color: white;
+        font-weight: bold;
+    }
+    .stTextArea textarea {
+        font-family: 'Georgia', serif;
+    }
     </style>
-    """, unsafe_all_html=True)
+    """, 
+    unsafe_allow_html=True
+)
 
-## --- TÍTULO Y CONFIGURACIÓN ---
-st.title("🖋️ Generador de Libros Académicos y Literarios")
-st.subheader("Optimizado para Kindle Direct Publishing (KDP)")
-
+## --- BARRA LATERAL: CONFIGURACIÓN ---
 with st.sidebar:
-    st.header("Configuración de API")
-    api_key = st.text_input("OpenRouter API Key", type="password")
+    st.header("⚙️ Configuración")
+    api_key = st.text_input("OpenRouter API Key", type="password", help="Introduce tu clave de API de OpenRouter.")
     
     model_options = {
         "Claude 3.5 Sonnet": "anthropic/claude-3.5-sonnet",
@@ -34,94 +49,134 @@ with st.sidebar:
         "Phi-3 Medium": "microsoft/phi-3-medium-128k-instruct"
     }
     
-    selected_model = st.selectbox("Selecciona el Modelo", list(model_options.keys()))
-    genre = st.selectbox("Género para Estilo KDP", ["Ensayo Filosófico", "Thriller Legal", "Historia", "Negocios"])
+    selected_model = st.selectbox("Modelo de Lenguaje", list(model_options.keys()))
+    genre = st.selectbox("Género Editorial", ["Ensayo Filosófico", "Derecho y Crítica", "Historia de Guatemala", "Estrategia de Negocios"])
     
     st.divider()
-    st.info("Este sistema genera capítulos de 2000-2200 palabras con ortografía española estricta.")
+    st.caption("Estilo: KDP Estándar")
+    st.caption("Ortografía: RAE + Comillas Españolas")
 
-## --- LÓGICA DE GENERACIÓN ---
+## --- FUNCIONES DE NÚCLEO ---
 
 def call_openrouter(prompt, api_key, model):
+    """Llamada a la API de OpenRouter con manejo de errores."""
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "http://localhost:8501", 
+        "HTTP-Referer": "http://localhost:8501",
         "Content-Type": "application/json"
     }
     data = {
         "model": model_options[model],
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {
+                "role": "system", 
+                "content": "Eres un escritor editorial de élite. Tu prosa es limpia, precisa y académica. No usas lenguaje de relleno ni comentarios de IA."
+            },
+            {"role": "user", "content": prompt}
+        ],
         "temperature": 0.7
     }
-    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(data))
-    if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content']
-    else:
-        return f"Error: {response.status_code} - {response.text}"
-
-def format_title(title):
-    # Solo mayúscula en la primera palabra y nombres propios (simplificado para la IA)
-    return title.capitalize()
+    try:
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return f"Error de API: {response.status_code} - {response.text}"
+    except Exception as e:
+        return f"Error de conexión: {str(e)}"
 
 ## --- INTERFAZ PRINCIPAL ---
 
-plan_editorial = st.text_area("Pega aquí el Plan Editorial (Capítulos y estructura):", height=200)
+st.title("🖋️ Generador Editorial Automático")
+st.write("Crea libros completos capítulo a capítulo con coherencia interna y estilo profesional.")
 
+# Entrada del Plan Editorial
+plan_editorial = st.text_area(
+    "Pega aquí tu Plan Editorial (un capítulo por línea):", 
+    height=250,
+    placeholder="Capítulo 1: La génesis del pensamiento barroco\nCapítulo 2: El ingenio como herramienta analítica..."
+)
+
+# Inicialización de estados
 if "libro_completo" not in st.session_state:
     st.session_state.libro_completo = ""
 if "capitulos_generados" not in st.session_state:
     st.session_state.capitulos_generados = []
 
-if st.button("Comenzar Generación de Libro"):
-    if not api_key or not plan_editorial:
-        st.error("Por favor, introduce la API Key y el Plan Editorial.")
+if st.button("🚀 Iniciar Generación Secuencial"):
+    if not api_key:
+        st.error("Falta la API Key.")
+    elif not plan_editorial:
+        st.warning("Por favor, introduce el plan editorial.")
     else:
-        lineas = [line for line in plan_editorial.split('\n') if line.strip()]
+        # Limpieza de líneas del plan
+        lineas = [line.strip() for line in plan_editorial.split('\n') if line.strip()]
         progress_bar = st.progress(0)
+        status_text = st.empty()
         
-        contexto_acumulado = "" # Para mantener coherencia
-        
-        for i, cap_info in enumerate(lineas):
-            st.write(f"Generando: {cap_info}...")
+        contexto_previo = "" # Memoria para evitar repeticiones
+        st.session_state.capitulos_generados = [] # Reiniciar si se pulsa de nuevo
+
+        for idx, linea in enumerate(lineas):
+            n_cap = idx + 1
+            status_text.info(f"⏳ Procesando Capítulo {n_cap}: {linea}...")
             
-            prompt_sistema = f"""
-            Actúa como un autor experto en {genre} para Kindle Direct Publishing.
-            Escribe el capítulo basado en: {cap_info}.
+            # Prompt de ingeniería para cumplir los requisitos estrictos
+            prompt = f"""
+            Escribe el texto íntegro del siguiente capítulo para un libro de {genre}.
             
-            REGLAS CRÍTICAS:
-            1. Longitud: Entre 2000 y 2200 palabras. Desarrolla profundamente cada idea.
-            2. Estilo: Evita el exceso de adjetivación. Usa un tono sobrio y preciso.
-            3. Ortografía: Usa estrictamente comillas españolas (« »). Gramática impecable.
-            4. Estructura de Título: Debe empezar exactamente con '# Capítulo {i+1}: [Título con solo mayúscula inicial]'.
-            5. Subtítulos: Solo mayúscula inicial en la primera palabra.
-            6. Contenido: Incluye secciones de contraargumentación y respuesta dialéctica.
-            7. Coherencia: El capítulo debe conectar con lo anterior: {contexto_acumulado[-1000:] if contexto_acumulado else "Inicio del libro"}.
-            8. No incluyas comentarios, introducciones o cierres de la IA. Solo el texto del libro en Markdown.
+            TEMA DEL CAPÍTULO: {linea}
+            CONTEXTO DEL LIBRO (Hasta ahora): {contexto_previo[-1500:]}
+            
+            REGLAS DE OBLIGADO CUMPLIMIENTO:
+            1. EXTENSIÓN: El capítulo debe tener entre 2000 y 2200 palabras. No te detengas hasta alcanzar este volumen de análisis profundo.
+            2. FORMATO DE TÍTULO: Comienza exactamente con '# Capítulo {n_cap}: [Título]'. Solo la primera palabra y nombres propios en mayúscula.
+            3. SUBTÍTULOS: Usa '## [Subtítulo]'. Solo mayúscula inicial en la primera palabra.
+            4. ORTOGRAFÍA: Usa estrictamente comillas españolas (« »). Gramática impecable según la RAE.
+            5. ESTILO: Evita el exceso de adjetivos. Busca una prosa sobria, clara y directa.
+            6. ESTRUCTURA: Debe incluir una sección de contraargumentación (objeciones a la tesis planteada) y su respectiva respuesta dialéctica.
+            7. COHERENCIA: Verifica que no se repitan conceptos ya explicados en el contexto anterior.
+            8. LIMPIEZA: No añadas saludos, despedidas, ni comentarios como "Aquí tienes el capítulo". Entrega solo el contenido en Markdown.
             """
             
-            contenido_cap = call_openrouter(prompt_sistema, api_key, selected_model)
+            contenido = call_openrouter(prompt, api_key, selected_model)
             
-            st.session_state.capitulos_generados.append(contenido_cap)
-            contexto_acumulado += f"\nResumen del capítulo {i+1}: {contenido_cap[:500]}..." 
+            if "Error" in contenido:
+                st.error(contenido)
+                break
+                
+            st.session_state.capitulos_generados.append(contenido)
             
-            progress_bar.progress((i + 1) / len(lineas))
-            st.success(f"Capítulo {i+1} completado.")
-            time.sleep(2) # Evitar rate limits
-
+            # Actualizar contexto para el siguiente capítulo
+            # Tomamos un resumen implícito de lo generado
+            contexto_previo += f"\nEn el capítulo {n_cap} se trató: {linea}. No repetir estos puntos clave."
+            
+            progress_bar.progress((idx + 1) / len(lineas))
+            
         st.session_state.libro_completo = "\n\n---\n\n".join(st.session_state.capitulos_generados)
+        status_text.success("✅ ¡Libro generado con éxito!")
 
-## --- ÁREA DE DESCARGA Y PREVISUALIZACIÓN ---
+## --- EXPORTACIÓN ---
 
 if st.session_state.libro_completo:
     st.divider()
-    st.header("Libro Compilado")
+    st.subheader("📄 Resultado Final")
     
-    st.download_button(
-        label="Descargar Libro en Markdown (.md)",
-        data=st.session_state.libro_completo,
-        file_name="libro_generado_kdp.md",
-        mime="text/markdown"
-    )
+    col1, col2 = st.columns(2)
     
-    with st.expander("Ver Vista Previa del Libro"):
+    with col1:
+        st.download_button(
+            label="⬇️ Descargar archivo Markdown (.md)",
+            data=st.session_state.libro_completo,
+            file_name="manuscrito_kdp.md",
+            mime="text/markdown"
+        )
+    
+    with col2:
+        if st.button("🧹 Limpiar sesión"):
+            st.session_state.libro_completo = ""
+            st.session_state.capitulos_generados = []
+            st.rerun()
+
+    with st.expander("🔍 Previsualizar Manuscrito"):
         st.markdown(st.session_state.libro_completo)
