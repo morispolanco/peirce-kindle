@@ -50,9 +50,11 @@ with st.sidebar:
         [
             "anthropic/claude-sonnet-4.5",
             "google/gemini-3-flash-preview",
+            "qwen/qwen3.5-plus-20260420"
             "minimax/minimax-m2.7",
             "openai/gpt-5.5",
             "openai/gpt-4o-mini",
+            "z-ai/glm-5.1"
             "meta-llama/llama-3.1-405b"
         ],
         help="Claude 3.5 es altamente recomendado para razonamiento lógico complejo."
