@@ -4,7 +4,6 @@ import json
 import time
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-# Debe ser la primera instrucción de Streamlit
 st.set_page_config(
     page_title="Escritor Editorial Inteligente",
     page_icon="📚",
@@ -37,7 +36,7 @@ def call_openrouter(prompt, api_key, model_id):
     data = {
         "model": model_id,
         "messages": [
-            {"role": "system", "content": "Eres un editor y escritor profesional. Tu prosa es académica, sobria y precisa. Usas comillas españolas (« ») y respetas la gramática de la RAE."},
+            {"role": "system", "content": "Eres un autor y editor profesional. Tu prosa es limpia, académica y profunda. Usas comillas españolas (« »)."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.4
@@ -51,12 +50,13 @@ def call_openrouter(prompt, api_key, model_id):
         return f"Error de conexión: {str(e)}"
 
 def extraer_esencia_editorial(plan_completo, api_key, model_id):
+    """Destila los puntos clave de un plan complejo."""
     prompt = f"""
     Analiza este plan editorial complejo y extrae la INTENCIÓN ESTRATÉGICA. 
-    Resume: 
-    1. Público objetivo. 
-    2. Tono y diferenciación. 
-    3. Puntos clave que el autor no debe olvidar.
+    Resume obligatoriamente: 
+    1. Público objetivo y tono de voz.
+    2. Diferenciación y razones del éxito previstas.
+    3. Estructura lógica de los capítulos identificados.
     
     PLAN EDITORIAL:
     {plan_completo}
@@ -70,75 +70,77 @@ with st.sidebar:
     st.header("⚙️ Configuración")
     api_key = st.text_input("OpenRouter API Key", type="password")
     
-    # Diccionario corregido con comas y IDs actuales
+    # Diccionario de modelos solicitado (Corregido y con IDs técnicos)
     model_options = {
-        "Claude 3.5 Sonnet": "anthropic/claude-3.5-sonnet",
-        "Gemini 1.5 Pro": "google/gemini-pro-1.5",
-        "GPT-4o": "openai/gpt-4o",
-        "Llama 3.1 405B": "meta-llama/llama-3.1-405b-instruct",
-        "DeepSeek V3": "deepseek/deepseek-chat",
-        "Mistral Large 2": "mistralai/mistral-large-2407",
-        "Qwen 2.5 72B": "qwen/qwen-2.5-72b-instruct"
+        "Auto: OpenRouter Free": "openrouter/free",
+        "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
+        "Gemini 3 Flash Preview": "google/gemini-3-flash-preview",
+        "Qwen 3.5 Plus (2026)": "qwen/qwen3.5-plus-20260420",
+        "Minimax M2.7": "minimax/minimax-m2.7",
+        "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
+        "GPT-4o Mini": "openai/gpt-4o-mini",
+        "GLM 5.1 (Z-AI)": "z-ai/glm-5.1",
+        "Llama 3.1 405B": "meta-llama/llama-3.1-405b"
     }
     
-    selected_name = st.selectbox("Cerebro del Escritor", list(model_options.keys()))
+    selected_name = st.selectbox("Selecciona el Modelo", list(model_options.keys()))
     selected_model_id = model_options[selected_name]
-    genre = st.text_input("Género (KDP)", value="Ensayo / Thriller")
+    genre = st.text_input("Género (KDP)", value="Ensayo Académico / Thriller")
 
 ## --- FLUJO PRINCIPAL ---
 
-st.title("🖋️ Escritura Basada en Plan Editorial Complejo")
-st.info("Pega tu plan editorial completo. El sistema extraerá la estrategia, el público y la estructura automáticamente.")
+st.title("🖋️ Escritura Editorial Basada en Estrategia")
+st.info("Sube tu plan editorial complejo. El sistema analizará el público y la intención antes de redactar.")
 
-plan_input = st.text_area("Cargar Plan Editorial Completo:", height=300)
+plan_input = st.text_area("Cargar Plan Editorial Completo:", height=250, placeholder="Pega aquí todo el documento del plan editorial...")
 
 if "manuscrito" not in st.session_state:
     st.session_state.manuscrito = ""
 if "esencia" not in st.session_state:
     st.session_state.esencia = ""
 
-if st.button("🚀 Procesar Plan e Iniciar Redacción"):
+if st.button("🚀 Analizar Plan e Iniciar Libro"):
     if not api_key or not plan_input:
         st.error("Se requiere la API Key y el contenido del plan.")
     else:
-        with st.status("Analizando estrategia editorial...", expanded=True) as status:
-            # 1. Extraer esencia
+        with st.status("Destilando estrategia editorial...", expanded=True) as status:
+            # 1. Extraer esencia estratégica
             esencia = extraer_esencia_editorial(plan_input, api_key, selected_model_id)
             st.session_state.esencia = esencia
-            st.write("**Estrategia extraída con éxito.**")
+            st.write("**Estrategia de redacción establecida.**")
             
-            # 2. Extraer capítulos
-            prompt_caps = f"Basado en el plan, lista solo los títulos de capítulos a escribir (uno por línea, sin números).\n\nPLAN:\n{plan_input}"
+            # 2. Identificar capítulos del plan
+            prompt_caps = f"Basado en el plan editorial, lista exclusivamente los títulos de capítulos a escribir. Uno por línea, sin números.\n\nPLAN:\n{plan_input}"
             lista_caps_raw = call_openrouter(prompt_caps, api_key, selected_model_id)
             lista_caps = [c.strip() for c in lista_caps_raw.split('\n') if len(c.strip()) > 5]
             
             capitulos_finales = []
             contexto_acumulado = ""
 
-            # 3. Escritura secuencial
+            # 3. Escritura secuencial capítulo a capítulo
             for i, titulo in enumerate(lista_caps):
                 n_cap = i + 1
                 st.write(f"✍️ Redactando Capítulo {n_cap}: {titulo}...")
                 
                 prompt_redaccion = f"""
-                Escribe el texto completo del capítulo.
-                ESTRATEGIA: {st.session_state.esencia}
-                TEMA: {titulo}
+                Escribe el texto completo del capítulo indicado.
+                ESTRATEGIA EDITORIAL: {st.session_state.esencia}
+                TEMA DEL CAPÍTULO: {titulo}
                 CONTEXTO PREVIO: {contexto_acumulado[-1500:]}
                 
-                REQUISITOS:
-                1. 2000-2200 palabras (desarrollo profundo).
-                2. Título: '# Capítulo {n_cap}: {titulo.capitalize()}'.
-                3. Solo mayúscula inicial en títulos y subtítulos.
-                4. Comillas españolas (« ») obligatorias.
-                5. Incluye contraargumentación y respuesta sólida.
-                6. Estilo sobrio, sin exceso de adjetivos.
-                7. Markdown puro, sin comentarios de IA.
+                REGLAS CRÍTICAS DE ESTILO:
+                1. EXTENSIÓN: Entre 2000 y 2200 palabras. Profundidad absoluta.
+                2. TÍTULO: '# Capítulo {n_cap}: {titulo.capitalize()}'.
+                3. CAPITALIZACIÓN: Títulos y subtítulos con mayúscula inicial solo en la primera palabra.
+                4. ORTOGRAFÍA: Usa estrictamente comillas españolas (« ») y gramática RAE.
+                5. ESTRUCTURA: Incluye obligatoriamente una sección de contraargumentación y su respuesta.
+                6. ADJETIVACIÓN: Mínima. Usa un estilo directo y profesional.
+                7. LIMPIEZA: Entrega solo el contenido en Markdown, sin comentarios de IA.
                 """
                 
                 cap_texto = call_openrouter(prompt_redaccion, api_key, selected_model_id)
                 capitulos_finales.append(cap_texto)
-                contexto_acumulado += f"\nCapítulo {n_cap}: {titulo} finalizado."
+                contexto_acumulado += f"\nCapítulo {n_cap}: {titulo}."
                 
             st.session_state.manuscrito = "\n\n---\n\n".join(capitulos_finales)
             status.update(label="¡Libro Completo!", state="complete", expanded=False)
@@ -146,12 +148,16 @@ if st.button("🚀 Procesar Plan e Iniciar Redacción"):
 ## --- EXPORTACIÓN ---
 if st.session_state.manuscrito:
     st.divider()
+    st.subheader("📄 Manuscrito Finalizado")
+    
     st.download_button(
-        "⬇️ Descargar Manuscrito (.md)",
+        "⬇️ Descargar Libro en Markdown (.md)",
         st.session_state.manuscrito,
-        file_name="manuscrito_final.md",
+        file_name="manuscrito_kdp.md",
         mime="text/markdown"
     )
-    with st.expander("Ver Análisis de Estrategia"):
+    
+    with st.expander("Ver Resumen Estratégico aplicado"):
         st.write(st.session_state.esencia)
+    
     st.markdown(st.session_state.manuscrito)
