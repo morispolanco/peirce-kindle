@@ -50,7 +50,6 @@ def call_openrouter(prompt, api_key, model_id):
         return f"Error de conexión: {str(e)}"
 
 def extraer_esencia_editorial(plan_completo, api_key, model_id):
-    """Destila los puntos clave de un plan complejo."""
     prompt = f"""
     Analiza este plan editorial complejo y extrae la INTENCIÓN ESTRATÉGICA. 
     Resume obligatoriamente: 
@@ -66,11 +65,18 @@ def extraer_esencia_editorial(plan_completo, api_key, model_id):
     return call_openrouter(prompt, api_key, model_id)
 
 ## --- BARRA LATERAL ---
+
 with st.sidebar:
     st.header("⚙️ Configuración")
-    api_key = st.text_input("OpenRouter API Key", type="password")
     
-    # Diccionario de modelos solicitado (Corregido y con IDs técnicos)
+    # Persistencia de la API Key en el estado de sesión
+    if "api_key_saved" not in st.session_state:
+        st.session_state.api_key_saved = ""
+    
+    api_key_input = st.text_input("OpenRouter API Key", type="password", value=st.session_state.api_key_saved)
+    if api_key_input:
+        st.session_state.api_key_saved = api_key_input
+
     model_options = {
         "Auto: OpenRouter Free": "openrouter/free",
         "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
@@ -80,20 +86,31 @@ with st.sidebar:
         "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
         "GPT-4o Mini": "openai/gpt-4o-mini",
         "GLM 5.1 (Z-AI)": "z-ai/glm-5.1",
-        "Kimi-k2.6": "moonshotai/kimi-k2.6",
+        "Kimi-k2.6 (Moonshot)": "moonshotai/kimi-k2.6",
         "Llama 3.1 405B": "meta-llama/llama-3.1-405b"
     }
     
     selected_name = st.selectbox("Selecciona el Modelo", list(model_options.keys()))
     selected_model_id = model_options[selected_name]
-    genre = st.text_input("Género (KDP)", value="Ensayo Académico / Thriller")
+
+    # Menú de 20 subgéneros de no ficción
+    no_fiction_genres = [
+        "Ensayo Filosófico", "Derecho y Crítica Legal", "Historia Contemporánea",
+        "Biografía Académica", "Manual de Estrategia de Negocios", "Tratado de Sociología",
+        "Divulgación Científica", "Economía Política", "Desarrollo Personal / Psicología",
+        "Periodismo de Investigación", "Crítica Literaria", "Filosofía de la Tecnología",
+        "Guía de Gestión Pública", "Análisis Geopolítico", "Historia de las Ideas",
+        "Ética y Moral", "Educación y Pedagogía", "Antropología Cultural",
+        "Teología y Religión", "Comunicación y Retórica"
+    ]
+    genre = st.selectbox("Subgénero de No Ficción", no_fiction_genres)
 
 ## --- FLUJO PRINCIPAL ---
 
 st.title("🖋️ Escritura Editorial Basada en Estrategia")
-st.info("Sube tu plan editorial complejo. El sistema analizará el público y la intención antes de redactar.")
+st.info("Sube tu plan editorial complejo. El sistema analizará el público y la intención antes de redactar cada capítulo.")
 
-plan_input = st.text_area("Cargar Plan Editorial Completo:", height=250, placeholder="Pega aquí todo el documento del plan editorial...")
+plan_input = st.text_area("Cargar Plan Editorial Completo:", height=250, placeholder="Pega aquí todo el documento del plan editorial (síntesis, público, capítulos, etc.)...")
 
 if "manuscrito" not in st.session_state:
     st.session_state.manuscrito = ""
@@ -101,47 +118,47 @@ if "esencia" not in st.session_state:
     st.session_state.esencia = ""
 
 if st.button("🚀 Analizar Plan e Iniciar Libro"):
-    if not api_key or not plan_input:
-        st.error("Se requiere la API Key y el contenido del plan.")
+    if not st.session_state.api_key_saved or not plan_input:
+        st.error("Se requiere la API Key y el contenido del plan editorial.")
     else:
         with st.status("Destilando estrategia editorial...", expanded=True) as status:
             # 1. Extraer esencia estratégica
-            esencia = extraer_esencia_editorial(plan_input, api_key, selected_model_id)
+            esencia = extraer_esencia_editorial(plan_input, st.session_state.api_key_saved, selected_model_id)
             st.session_state.esencia = esencia
             st.write("**Estrategia de redacción establecida.**")
             
             # 2. Identificar capítulos del plan
             prompt_caps = f"Basado en el plan editorial, lista exclusivamente los títulos de capítulos a escribir. Uno por línea, sin números.\n\nPLAN:\n{plan_input}"
-            lista_caps_raw = call_openrouter(prompt_caps, api_key, selected_model_id)
+            lista_caps_raw = call_openrouter(prompt_caps, st.session_state.api_key_saved, selected_model_id)
             lista_caps = [c.strip() for c in lista_caps_raw.split('\n') if len(c.strip()) > 5]
             
             capitulos_finales = []
-            contexto_acumulado = ""
+            contexto_previo = ""
 
-            # 3. Escritura secuencial capítulo a capítulo
+            # 3. Escritura secuencial
             for i, titulo in enumerate(lista_caps):
                 n_cap = i + 1
                 st.write(f"✍️ Redactando Capítulo {n_cap}: {titulo}...")
                 
                 prompt_redaccion = f"""
-                Escribe el texto completo del capítulo indicado.
+                Escribe el texto completo del capítulo indicado para un libro de {genre}.
                 ESTRATEGIA EDITORIAL: {st.session_state.esencia}
                 TEMA DEL CAPÍTULO: {titulo}
-                CONTEXTO PREVIO: {contexto_acumulado[-1500:]}
+                CONTEXTO PREVIO: {contexto_previo[-1500:]}
                 
                 REGLAS CRÍTICAS DE ESTILO:
-                1. EXTENSIÓN: Entre 2000 y 2200 palabras. Profundidad absoluta.
+                1. EXTENSIÓN: Entre 2000 y 2200 palabras. Desarrollo intelectual profundo.
                 2. TÍTULO: '# Capítulo {n_cap}: {titulo.capitalize()}'.
                 3. CAPITALIZACIÓN: Títulos y subtítulos con mayúscula inicial solo en la primera palabra.
                 4. ORTOGRAFÍA: Usa estrictamente comillas españolas (« ») y gramática RAE.
-                5. ESTRUCTURA: Incluye obligatoriamente una sección de contraargumentación y su respuesta.
-                6. ADJETIVACIÓN: Mínima. Usa un estilo directo y profesional.
-                7. LIMPIEZA: Entrega solo el contenido en Markdown, sin comentarios de IA.
+                5. ESTRUCTURA: Incluye obligatoriamente una sección de contraargumentación y su respuesta sólida.
+                6. ADJETIVACIÓN: Mínima y precisa. Estilo profesional y directo.
+                7. LIMPIEZA: No incluyas comentarios, introducciones o cierres de la IA. Solo Markdown.
                 """
                 
-                cap_texto = call_openrouter(prompt_redaccion, api_key, selected_model_id)
+                cap_texto = call_openrouter(prompt_redaccion, st.session_state.api_key_saved, selected_model_id)
                 capitulos_finales.append(cap_texto)
-                contexto_acumulado += f"\nCapítulo {n_cap}: {titulo}."
+                contexto_previo += f"\nCapítulo {n_cap}: {titulo}."
                 
             st.session_state.manuscrito = "\n\n---\n\n".join(capitulos_finales)
             status.update(label="¡Libro Completo!", state="complete", expanded=False)
