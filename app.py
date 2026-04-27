@@ -5,7 +5,7 @@ import time
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
-    page_title="Escritor Editorial Inteligente Pro",
+    page_title="Escritor Editorial Inteligente",
     page_icon="📚",
     layout="wide"
 )
@@ -20,20 +20,19 @@ st.markdown(
         background-color: #1a1a1a; color: white; font-weight: bold;
     }
     .stTextArea textarea { font-size: 14px; line-height: 1.6; font-family: 'Georgia', serif; }
-    .stProgress > div > div > div > div { background-color: #1a1a1a; }
     </style>
     """, 
     unsafe_allow_html=True
 )
 
-# --- PERSISTENCIA DE API KEY ---
+## --- LÓGICA DE PERSISTENCIA REAL ---
 @st.cache_resource
 def get_persistent_key():
     return {"key": ""}
 
 persistence = get_persistent_key()
 
-# --- LÓGICA DE PROCESAMIENTO ---
+## --- LÓGICA DE PROCESAMIENTO ---
 
 def call_openrouter(prompt, api_key, model_id):
     headers = {
@@ -44,32 +43,34 @@ def call_openrouter(prompt, api_key, model_id):
     data = {
         "model": model_id,
         "messages": [
-            {"role": "system", "content": "Eres un autor profesional de alto nivel. Usas comillas españolas (« ») y prosa académica profunda. Tu objetivo es la exhaustividad y el rigor."},
+            {"role": "system", "content": "Eres un autor profesional. Usas comillas españolas (« ») y prosa académica profunda."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.4
     }
     try:
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(data), timeout=120)
+        # Añadimos un timeout extendido para evitar cortes en textos largos
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(data), timeout=180)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         return f"Error: {response.status_code} - {response.text}"
     except Exception as e:
-        return f"Error de conexión: {str(e)}"
+        return f"Error: {str(e)}"
 
 def extraer_esencia_editorial(plan_completo, api_key, model_id):
-    prompt = f"Analiza este plan editorial y extrae público objetivo, tono específico y estructura narrativa principal:\n\n{plan_completo}"
+    prompt = f"Analiza este plan editorial y extrae público, tono y estructura:\n\n{plan_completo}"
     return call_openrouter(prompt, api_key, model_id)
 
-# --- INICIALIZACIÓN DE ESTADOS (Evita desapariciones) ---
+## --- INICIALIZACIÓN DE ESTADOS (Clave para no perder datos) ---
 if "manuscrito_lista" not in st.session_state:
-    st.session_state.manuscrito_lista = []  # Guardamos capítulos como lista para mayor seguridad
+    st.session_state.manuscrito_lista = []
 if "lista_caps_titulos" not in st.session_state:
     st.session_state.lista_caps_titulos = []
 if "esencia_cache" not in st.session_state:
     st.session_state.esencia_cache = ""
 
-# --- BARRA LATERAL ---
+## --- BARRA LATERAL ---
+
 with st.sidebar:
     st.header("⚙️ Configuración")
     
@@ -78,14 +79,20 @@ with st.sidebar:
     
     if api_key_input != current_key:
         persistence["key"] = api_key_input
-        st.success("API Key vinculada.")
+        st.success("API Key guardada.")
 
+    # Restablecidos todos tus modelos originales
     model_options = {
+        "Auto: OpenRouter Free": "openrouter/free",
         "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
         "Gemini 3 Flash Preview": "google/gemini-3-flash-preview",
+        "Qwen 3.5 Plus (2026)": "qwen/qwen3.5-plus-20260420",
+        "Minimax M2.7": "minimax/minimax-m2.7",
         "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
-        "Llama 3.1 405B": "meta-llama/llama-3.1-405b",
-        "GPT-4o Mini": "openai/gpt-4o-mini"
+        "GPT-4o Mini": "openai/gpt-4o-mini",
+        "GLM 5.1 (Z-AI)": "z-ai/glm-5.1",
+        "Kimi-k2.6 (Moonshot)": "moonshotai/kimi-k2.6",
+        "Llama 3.1 405B": "meta-llama/llama-3.1-405b"
     }
     
     selected_name = st.selectbox("Modelo", list(model_options.keys()))
@@ -94,96 +101,83 @@ with st.sidebar:
     no_fiction_genres = [
         "Ensayo Filosófico", "Derecho y Crítica Legal", "Historia Contemporánea",
         "Biografía Académica", "Manual de Estrategia de Negocios", "Tratado de Sociología",
-        "Divulgación Científica", "Economía Política", "Desarrollo Personal"
+        "Divulgación Científica", "Economía Política", "Desarrollo Personal",
+        "Periodismo de Investigación", "Crítica Literaria", "Filosofía de la Tecnología",
+        "Guía de Gestión Pública", "Análisis Geopolítico", "Historia de las Ideas",
+        "Ética y Moral", "Educación y Pedagogía", "Antropología Cultural",
+        "Teología y Religión", "Comunicación y Retórica"
     ]
-    genre = st.selectbox("Subgénero", no_fiction_genres)
+    genre = st.selectbox("Subgénero de No Ficción", no_fiction_genres)
 
-    if st.button("🗑️ Resetear Progreso"):
+    if st.button("🗑️ Borrar Progreso"):
         st.session_state.manuscrito_lista = []
         st.session_state.lista_caps_titulos = []
         st.session_state.esencia_cache = ""
         st.rerun()
 
-# --- FLUJO PRINCIPAL ---
+## --- FLUJO PRINCIPAL ---
 
-st.title("🖋️ Escritor Editorial Inteligente")
-st.info("Esta versión guarda automáticamente cada capítulo. Si el proceso se detiene, pulsa 'Continuar Escritura'.")
+st.title("🖋️ Escritura Editorial")
+plan_input = st.text_area("Cargar Plan Editorial Completo:", height=250)
 
-plan_input = st.text_area("Cargar Plan Editorial Completo:", height=200, placeholder="Pega aquí el índice o plan detallado...")
-
-# Lógica del Botón Principal
-btn_label = "🚀 Iniciar Libro" if not st.session_state.manuscrito_lista else "🔄 Continuar Escritura"
+# Botón dinámico: cambia si hay algo ya escrito
+btn_label = "🚀 Iniciar Libro" if not st.session_state.manuscrito_lista else "🔄 Continuar Generación"
 
 if st.button(btn_label):
     active_key = persistence["key"]
-    
     if not active_key:
-        st.error("Introduce la API Key.")
+        st.error("Por favor, introduce la API Key en la barra lateral.")
     elif not plan_input:
         st.error("El plan editorial está vacío.")
     else:
-        with st.status("Trabajando en la obra...", expanded=True) as status:
+        with st.status("Procesando...", expanded=True) as status:
             
-            # 1. Obtener esencia y títulos si es la primera vez
+            # Paso 1: Analizar el plan solo si no se ha hecho antes
             if not st.session_state.lista_caps_titulos:
-                st.write("🔍 Analizando estructura...")
+                st.write("📋 Analizando plan y extrayendo capítulos...")
                 st.session_state.esencia_cache = extraer_esencia_editorial(plan_input, active_key, selected_model_id)
                 
-                prompt_caps = f"Lista exclusivamente los títulos de los capítulos, uno por línea, sin números: \n{plan_input}"
-                raw_titles = call_openrouter(prompt_caps, active_key, selected_model_id)
-                st.session_state.lista_caps_titulos = [t.strip() for t in raw_titles.split('\n') if len(t.strip()) > 3]
+                prompt_caps = f"Lista títulos de capítulos (uno por línea, sin numeración adicional):\n{plan_input}"
+                lista_caps_raw = call_openrouter(prompt_caps, active_key, selected_model_id)
+                st.session_state.lista_caps_titulos = [c.strip() for c in lista_caps_raw.split('\n') if len(c.strip()) > 5]
 
-            # 2. Bucle de escritura incremental
+            # Paso 2: Generación incremental
             total_caps = len(st.session_state.lista_caps_titulos)
             
             for i, titulo in enumerate(st.session_state.lista_caps_titulos):
-                # Si el capítulo ya existe en la lista, lo saltamos
+                # Saltamos los que ya están en memoria
                 if i < len(st.session_state.manuscrito_lista):
                     continue
                 
                 n_cap = i + 1
-                st.write(f"✍️ Redactando Capítulo {n_cap}/{total_caps}: **{titulo}**...")
+                st.write(f"✍️ Redactando Capítulo {n_cap}/{total_caps}: {titulo}...")
                 
                 prompt_redaccion = f"""
                 Escribe el capítulo {n_cap} de un libro de {genre}.
-                TÍTULO: '# Capítulo {n_cap}: {titulo}'.
-                CONTEXTO EDITORIAL: {st.session_state.esencia_cache}
-                REGLAS: Mínimo 2000 palabras. Usa comillas españolas « ». 
-                Estructura: Introducción profunda, desarrollo con contraargumentación y conclusión académica.
+                TÍTULO: '# Capítulo {n_cap}: {titulo.capitalize()}'.
+                ESTRATEGIA: {st.session_state.esencia_cache}
+                REGLAS: 2000-2200 palabras, comillas españolas « », contraargumentación necesaria.
                 """
                 
-                contenido_cap = call_openrouter(prompt_redaccion, active_key, selected_model_id)
+                cap_texto = call_openrouter(prompt_redaccion, active_key, selected_model_id)
                 
-                if "Error" not in contenido_cap:
-                    # PERSISTENCIA INMEDIATA
-                    st.session_state.manuscrito_lista.append(contenido_cap)
-                    # Forzamos un pequeño guardado visual
-                    st.toast(f"Capítulo {n_cap} guardado.")
+                if "Error" not in cap_texto:
+                    # Guardamos el capítulo inmediatamente
+                    st.session_state.manuscrito_lista.append(cap_texto)
+                    st.toast(f"Capítulo {n_cap} guardado correctamente.")
                 else:
-                    st.error(f"Fallo en capítulo {n_cap}. Deteniendo para evitar pérdida de créditos.")
+                    st.error(f"Error en el capítulo {n_cap}. Reintenta pulsando el botón de nuevo.")
                     break
-            
-            status.update(label="Proceso finalizado o pausado.", state="complete")
+                
+            status.update(label="¡Proceso finalizado!", state="complete")
 
-# --- ÁREA DE DESCARGA Y VISUALIZACIÓN ---
+# --- VISUALIZACIÓN Y DESCARGA ---
 
 if st.session_state.manuscrito_lista:
-    full_text = "\n\n---\n\n".join(st.session_state.manuscrito_lista)
+    manuscrito_completo = "\n\n---\n\n".join(st.session_state.manuscrito_lista)
     
     st.divider()
-    col1, col2 = st.columns([1, 4])
+    st.download_button("⬇️ Descargar Manuscrito (.md)", manuscrito_completo, file_name="libro_completo.md")
     
-    with col1:
-        st.subheader("📦 Entrega")
-        st.download_button(
-            label="⬇️ Descargar Manuscrito (.md)",
-            data=full_text,
-            file_name="manuscrito_editorial.md",
-            mime="text/markdown"
-        )
-        st.write(f"**Capítulos completados:** {len(st.session_state.manuscrito_lista)}")
-    
-    with col2:
-        st.subheader("📖 Previsualización")
-        with st.expander("Ver contenido completo", expanded=True):
-            st.markdown(full_text)
+    with st.expander("📖 Previsualizar Manuscrito", expanded=True):
+        st.markdown(manuscrito_completo)
