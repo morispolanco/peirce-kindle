@@ -69,12 +69,15 @@ with st.sidebar:
     api_key = st.text_input("OpenRouter API Key", type="password")
     
     model_options = {
-        "Claude 3.5 Sonnet": "anthropic/claude-3.5-sonnet",
-        "GPT-4o": "openai/gpt-4o",
-        "Llama 3.1 405B": "meta-llama/llama-3.1-405b-instruct",
-        "DeepSeek V3": "deepseek/deepseek-chat",
-        "Gemini Pro 1.5": "google/gemini-pro-1.5",
-        "Mistral Large 2": "mistralai/mistral-large-2407"
+        "openrouter/free",
+        "anthropic/claude-sonnet-4.5",
+        "google/gemini-3-flash-preview",
+        "qwen/qwen3.5-plus-20260420"
+        "minimax/minimax-m2.7",
+        "openai/gpt-5.5",
+        "openai/gpt-4o-mini",
+        "z-ai/glm-5.1"
+        "meta-llama/llama-3.1-405b"
     }
     selected_model = st.selectbox("Cerebro del Escritor", list(model_options.keys()))
     genre = st.text_input("Género (KDP)", value="Ensayo Académico / Thriller")
