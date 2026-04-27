@@ -48,8 +48,10 @@ with st.sidebar:
     model_option = st.selectbox(
         "Cerebro de IA (Modelo)",
         [
-            "anthropic/claude-3.5-sonnet",
-            "google/gemini-2.0-flash-001",
+            "anthropic/claude-sonnet-4.5",
+            "google/gemini-3-flash-preview",
+            "minimax/minimax-m2.7",
+            "openai/gpt-5.5",
             "openai/gpt-4o-mini",
             "meta-llama/llama-3.1-405b"
         ],
