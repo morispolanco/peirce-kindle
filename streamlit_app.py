@@ -54,7 +54,7 @@ with st.sidebar:
             "minimax/minimax-m2.7",
             "openai/gpt-5.5",
             "openai/gpt-4o-mini",
-            "z-ai/glm-5.1"
+            "z-ai/glm-5.1",
             "meta-llama/llama-3.1-405b"
         ],
         help="Claude 3.5 es altamente recomendado para razonamiento lógico complejo."
