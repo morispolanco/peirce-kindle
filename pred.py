@@ -2,10 +2,10 @@ import streamlit as st
 import requests
 import json
 
-# --- Configuración de página ---
-st.set_page_config(page_title="KDP Book Creator Pro", page_icon="📚", layout="wide")
+# --- Configuración de la página ---
+st.set_page_config(page_title="KDP Writer Pro: 12 Capítulos", page_icon="🖋️", layout="wide")
 
-# --- Modelos Disponibles ---
+# --- Diccionario de Modelos 2026 ---
 MODELS = {
     "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
     "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
@@ -15,7 +15,15 @@ MODELS = {
     "GPT-4o Mini": "openai/gpt-4o-mini"
 }
 
-# --- Funciones de API ---
+# --- Estilos CSS ---
+st.markdown("""
+    <style>
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1e8449; color: white; }
+    .progress-text { font-size: 1.2rem; font-weight: bold; color: #2c3e50; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Función de Comunicación con OpenRouter ---
 def call_openrouter(prompt, key, model):
     try:
         response = requests.post(
@@ -23,90 +31,97 @@ def call_openrouter(prompt, key, model):
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             data=json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}]})
         )
-        return response.json()['choices'][0]['message']['content']
-    except:
-        return "Error en la conexión con la API."
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return f"Error: {response.status_code} - {response.text}"
+    except Exception as e:
+        return f"Error de conexión: {str(e)}"
 
-# --- Interfaz Lateral ---
+# --- Barra Lateral ---
 with st.sidebar:
-    st.title("⚙️ Configuración")
+    st.title("🛡️ Panel de Control")
     api_key = st.text_input("OpenRouter API Key", type="password")
-    model_choice = st.selectbox("Modelo", list(MODELS.keys()))
+    model_choice = st.selectbox("Cerebro Lógico", list(MODELS.keys()))
     selected_model = MODELS[model_choice]
     st.divider()
-    st.info("Este sistema genera libros completos siguiendo la lógica de Peirce y estándares editoriales estrictos.")
+    st.info("Configurado para: 12 Capítulos de 2200 palabras.")
 
-# --- Flujo de Aplicación ---
-st.title("📚 Escritor Editorial Abductivo 2026")
+# --- Flujo de Trabajo ---
+st.title("🚀 Generador Editorial Abductivo")
 
-# PASO 1: PREDICCIÓN DE TENDENCIAS
-st.header("1. Predicción de Tendencias")
-c1, c2 = st.columns(2)
-with c1: mes = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
-with c2: anio = st.selectbox("Año", [2026, 2027, 2028])
+# ETAPA 1: PREDICCIÓN
+st.header("1. Horizonte Temporal")
+col1, col2 = st.columns(2)
+with col1: mes = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
+with col2: anio = st.selectbox("Año", [2026, 2027, 2028])
 
-if st.button("🔍 Predecir Futuros Nichos"):
-    prompt_trends = f"Actúa como analista de tendencias. Lista 5 tendencias de nicho para KDP en {mes} de {anio}. Explica por qué son relevantes."
+if st.button("🔍 Predecir Tendencias Emergentes"):
+    prompt_trends = f"Actúa como analista de tendencias futuras. Predice 5 nichos específicos para KDP en {mes} de {anio}. Explica la justificación de cada uno."
     trends = call_openrouter(prompt_trends, api_key, selected_model)
     st.session_state['trends'] = trends
 
 if 'trends' in st.session_state:
-    st.markdown(st.session_state['trends'])
+    st.markdown("### Tendencias Detectadas")
+    st.info(st.session_state['trends'])
     
-    # PASO 2: SELECCIÓN Y ABDUCCIÓN
-    st.header("2. Elección y Análisis Abductivo")
-    tendencia_user = st.text_input("Escribe o pega la tendencia elegida:")
+    # ETAPA 2: ABDUCCIÓN Y PLAN
+    st.header("2. Análisis Abductivo y Plan Editorial")
+    chosen_trend = st.text_input("Ingresa la tendencia elegida:")
     
-    if st.button("🧠 Generar Plan Editorial de 20 Capítulos"):
+    if st.button("🧠 Crear Plan de 12 Capítulos"):
         prompt_plan = f"""
-        Realiza un análisis abductivo de Peirce para la tendencia '{tendencia_user}'. 
-        Detecta la anomalía (Hecho sorprendente C) y propón la hipótesis (A).
-        Luego, crea un plan editorial de 20 capítulos. 
-        Reglas: Títulos con mayúscula inicial solo en la primera palabra y nombres propios.
-        Incluye Título, Subtítulo y Síntesis.
+        Aplica la lógica abductiva de Peirce para la tendencia: '{chosen_trend}'.
+        1. Identifica el Hecho Sorprendente (Anomalía de mercado).
+        2. Plantea la Hipótesis Abductiva.
+        3. Genera un PLAN EDITORIAL de 12 CAPÍTULOS.
+        
+        REGLAS DE FORMATO:
+        - Títulos: Mayúscula inicial solo en la primera palabra y nombres propios.
+        - Estructura: Título, Subtítulo, Síntesis y Tabla de contenidos.
         """
         plan = call_openrouter(prompt_plan, api_key, selected_model)
         st.session_state['plan'] = plan
-        st.session_state['ready_to_write'] = True
 
 if 'plan' in st.session_state:
     st.divider()
     st.markdown(st.session_state['plan'])
 
-    # PASO 3: ESCRITURA CAPÍTULO A CAPÍTULO
-    if st.session_state.get('ready_to_write'):
-        st.header("3. Escritura del Libro")
-        if st.button("✍️ Iniciar Redacción del Libro Completo"):
-            full_book = ""
-            progress_bar = st.progress(0)
+    # ETAPA 3: ESCRITURA
+    st.header("3. Redacción del Libro")
+    if st.button("✍️ Iniciar Escritura del Libro (12 Capítulos x 2200 palabras)"):
+        book_content = ""
+        prog_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i in range(1, 13):
+            status_text.markdown(f"**Escribiendo Capítulo {i} de 12...** (Extensión objetivo: 2200 palabras)")
+            prompt_writing = f"""
+            Escribe el capítulo {i} basado en el plan: {st.session_state['plan']}.
             
-            # Simulamos el bucle para los 20 capítulos
-            for i in range(1, 21):
-                st.write(f"Redactando Capítulo {i}...")
-                prompt_cap = f"""
-                Escribe el Capítulo {i} del libro basado en el siguiente plan: {st.session_state['plan']}.
-                CONVENCIONES:
-                - Extensión: Aproximadamente 2000 palabras.
-                - Formato: Empezar con '# Capítulo {i}: [título del capítulo]'.
-                - Títulos: Mayúscula inicial solo en la primera palabra.
-                - Puntuación: Usa comillas españolas (« »).
-                - Estilo: Profesional, profundo y sin comentarios de IA.
-                """
-                cap_content = call_openrouter(prompt_cap, api_key, selected_model)
-                full_book += cap_content + "\n\n"
-                progress_bar.progress(i / 20)
+            CONVENCIONES OBLIGATORIAS:
+            - Extensión: Aproximadamente 2200 palabras. Sé extremadamente detallado, profundo y analítico.
+            - Inicio: Comienza exactamente con '# Capítulo {i}: [Título del capítulo]'.
+            - Títulos: Mayúscula inicial solo en la primera palabra (salvo nombres propios).
+            - Puntuación: Usa únicamente comillas españolas (« »).
+            - No incluyas comentarios de IA, introducciones o despedidas del asistente.
+            - Idioma: Español formal y técnico.
+            """
+            chapter_text = call_openrouter(prompt_writing, api_key, selected_model)
+            book_content += chapter_text + "\n\n"
+            prog_bar.progress(i / 12)
             
-            st.session_state['full_book_md'] = full_book
-            st.success("¡Libro completado!")
+        st.session_state['full_book'] = book_content
+        st.success("¡Redacción finalizada con éxito!")
 
-# PASO 4: EXPORTACIÓN
-if 'full_book_md' in st.session_state:
-    st.header("4. Compilación Final")
-    st.text_area("Previsualización de Markdown", st.session_state['full_book_md'][:1000] + "...", height=300)
+# ETAPA 4: EXPORTACIÓN
+if 'full_book' in st.session_state:
+    st.divider()
+    st.subheader("💾 Compilación Final")
     
     st.download_button(
-        label="📥 Descargar Libro Completo (Markdown)",
-        data=st.session_state['full_book_md'],
-        file_name="libro_kdp_completo.md",
+        label="📥 Descargar Libro en Markdown (.md)",
+        data=st.session_state['full_book'],
+        file_name="manuscrito_kdp_abductivo.md",
         mime="text/markdown"
     )
