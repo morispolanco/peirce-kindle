@@ -2,110 +2,98 @@ import streamlit as st
 import requests
 import json
 
-# --- Configuración de la Página ---
-st.set_page_config(
-    page_title="Abductor de Nichos KDP",
-    page_icon="🔍",
-    layout="wide"
-)
+# --- Configuración de la interfaz ---
+st.set_page_config(page_title="KDP Abductive Engine 2026", page_icon="🧬", layout="wide")
 
-# --- Estilos Personalizados ---
 st.markdown("""
     <style>
-    .stTextArea textarea { font-size: 1.1rem; }
-    .reportview-container { background: #fdfdfd; }
+    .main { background-color: #f0f2f6; }
+    .stButton>button { width: 100%; border-radius: 20px; background-color: #2e4053; color: white; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Barra Lateral: Configuración ---
+# --- Diccionario de Modelos (Actualizado 2026) ---
+MODELS = {
+    "Auto: OpenRouter Free": "openrouter/free",
+    "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
+    "Gemini 3 Flash Preview": "google/gemini-3-flash-preview",
+    "Qwen 3.5 Plus (2026)": "qwen/qwen3.5-plus-20260420",
+    "Minimax M2.7": "minimax/minimax-m2.7",
+    "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
+    "GPT-4o Mini": "openai/gpt-4o-mini",
+    "GLM 5.1 (Z-AI)": "z-ai/glm-5.1",
+    "Kimi-k2.6 (Moonshot)": "moonshotai/kimi-k2.6",
+    "Llama 3.1 405B": "meta-llama/llama-3.1-405b"
+}
+
+# --- Barra Lateral ---
 with st.sidebar:
-    st.title("⚙️ Configuración")
+    st.title("🛡️ Panel de Control")
     api_key = st.text_input("OpenRouter API Key", type="password")
     
-    model_choice = st.selectbox(
-        "Cerebro Lógico",
-        options=[
-            "google/gemini-pro-1.5",
-            "anthropic/claude-3-sonnet",
-            "openai/gpt-4o",
-            "meta-llama/llama-3-70b-instruct"
-        ],
-        index=0
-    )
+    model_name = st.selectbox("Cerebro Lógico (LLM):", list(MODELS.keys()))
+    selected_model = MODELS[model_name]
     
     st.divider()
-    st.markdown("""
-    **La Lógica de la Invención:**
-    Según Peirce, la abducción es la única operación lógica que introduce una **idea nueva**. 
-    Aquí, la IA 'observa' el mercado por ti para encontrar lo que otros pasan por alto.
-    """)
+    st.write("**Lógica de Peirce:**")
+    st.caption("La abducción no es adivinanza; es la construcción de una hipótesis basada en una anomalía detectada en el caos del mercado.")
 
-# --- Función de Comunicación ---
-def call_openrouter(prompt, key, model):
+# --- Lógica de API ---
+def call_abduction_api(keyword, key, model):
+    prompt = f"""
+    Eres un analista de mercado experto en Amazon KDP y un lógico peirciano.
+    Tu objetivo es encontrar un nicho de mercado para la palabra clave: "{keyword}".
+    
+    Aplica rigurosamente el proceso abductivo:
+    1. Identifica un 'Hecho Sorprendente' (C) en Amazon relacionado con "{keyword}" (ej. un desajuste entre intención de búsqueda y calidad de oferta).
+    2. Formula la 'Hipótesis' (A) que, de ser cierta, explicaría ese desajuste y se convertiría en un nicho rentable.
+    3. Justifica por qué 'A' es una explicación plausible y necesaria.
+    
+    Salida esperada:
+    - Título del Nicho Hipotético.
+    - Descripción de la Anomalía detectada.
+    - Estrategia Editorial (Ángulo de ataque).
+    - Sugerencia de 2 títulos potenciales.
+    """
+    
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": model,
-                "messages": [{"role": "system", "content": "Eres un experto en lógica peirciana y análisis de mercados en Amazon KDP."},
-                             {"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": prompt}]
             })
         )
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            return f"Error: {response.status_code} - {response.text}"
+        return response.json()['choices'][0]['message']['content']
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error en la comunicación: {str(e)}"
 
-# --- Interfaz Principal ---
-st.title("💡 Generador de Hipótesis KDP")
-st.markdown("### De la Palabra Clave al Hecho Sorprendente")
+# --- Cuerpo Principal ---
+st.title("🧬 Motor de Abducción KDP")
+st.markdown("### De la Palabra Clave a la Hipótesis de Mercado")
 
-# Entrada del usuario
-keyword = st.text_input("Ingresa una palabra clave o tema general:", placeholder="Ej: Inteligencia Artificial, Jardinería, Cripto...")
+target_keyword = st.text_input("Ingresa una sola palabra clave o concepto:", placeholder="Ej: Estoicismo, Ciberseguridad, Jardinería Zen...")
 
-if st.button("Realizar Inferencia Completa"):
+if st.button("Iniciar Proceso de Inferencia"):
     if not api_key:
-        st.error("Se requiere la API Key de OpenRouter.")
-    elif not keyword:
-        st.warning("Por favor, introduce un tema de interés.")
+        st.error("Por favor, introduce tu API Key.")
+    elif not target_keyword:
+        st.warning("Escribe una palabra clave para comenzar.")
     else:
-        # Prompt diseñado para forzar la estructura de Peirce
-        prompt_completo = f"""
-        Analiza el nicho de mercado en Amazon KDP para la palabra clave: "{keyword}".
-        
-        Sigue estrictamente este proceso de razonamiento abductivo de Charles Sanders Peirce:
-        
-        1. **EL HECHO SORPRENDENTE (C):** Imagina y describe una anomalía o fenómeno inusual en los datos actuales de Amazon para esta palabra clave. (Ej: 'Existe un alto volumen de búsqueda para X, pero los libros que aparecen son todos traducciones mediocres de otros idiomas' o 'La gente busca X mezclado con Y, pero no hay ningún libro que combine ambos').
-        
-        2. **LA HIPÓTESIS EXPLICATIVA (A):** Si la hipótesis 'A' fuera verdadera (un nuevo tipo de libro o nicho específico), entonces el hecho 'C' sería algo natural y esperado. Define esta hipótesis con precisión.
-        
-        3. **EL SALTO CUALITATIVO:** Explica por qué esta idea es una innovación y no solo una copia de lo que ya existe.
-        
-        4. **PRODUCTO RESULTANTE:**
-           - Título sugerido impactante.
-           - Subtítulo optimizado para SEO.
-           - 3 Puntos clave de diferenciación (USP).
-           - Público objetivo específico.
-
-        Presenta la respuesta con un tono profesional, analítico y creativo.
-        """
-        
-        with st.spinner(f"Analizando '{keyword}' bajo la lente de Peirce..."):
-            resultado = call_openrouter(prompt_completo, api_key, model_choice)
+        with st.spinner(f"El modelo {model_name} está detectando anomalías..."):
+            resultado = call_abduction_api(target_keyword, api_key, selected_model)
             
-            # Mostrar resultados en un diseño limpio
-            st.divider()
+            st.success("Salto Abductivo Completado")
+            st.markdown("---")
             st.markdown(resultado)
-            
-            # Metadatos de la consulta
-            st.caption(f"Inferencia realizada con el modelo: {model_choice}")
 
-# --- Footer ---
-st.divider()
-st.info("Nota: La abducción no garantiza el éxito, sino que señala una dirección probable para la experimentación creativa.")
+# --- Documentación Educativa ---
+with st.expander("¿Cómo funciona el silogismo abductivo aquí?"):
+    st.write("""
+    1. **Observación (C):** Se observa un hecho sorprendente $C$ en los datos de Amazon.
+    2. **Hipótesis (A):** Si la hipótesis $A$ fuera verdadera, $C$ sería una cuestión de curso.
+    3. **Conclusión:** Por lo tanto, hay razón para sospechar que $A$ es verdadera.
+    
+    La IA analiza los patrones de consumo asociados a tu palabra clave para proponer esa $A$ que falta.
+    """)
