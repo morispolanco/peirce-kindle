@@ -2,10 +2,10 @@ import streamlit as st
 import requests
 import json
 
-# --- Configuración de la página ---
-st.set_page_config(page_title="KDP Writer Pro: 12 Capítulos", page_icon="🖋️", layout="wide")
+# --- Configuración de la interfaz ---
+st.set_page_config(page_title="KDP España: Escritor Abductivo", page_icon="🇪🇸", layout="wide")
 
-# --- Diccionario de Modelos 2026 ---
+# --- Modelos 2026 ---
 MODELS = {
     "Claude 4.5 Sonnet": "anthropic/claude-sonnet-4.5",
     "GPT-5.5 (OpenAI)": "openai/gpt-5.5",
@@ -15,15 +15,7 @@ MODELS = {
     "GPT-4o Mini": "openai/gpt-4o-mini"
 }
 
-# --- Estilos CSS ---
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; background-color: #1e8449; color: white; }
-    .progress-text { font-size: 1.2rem; font-weight: bold; color: #2c3e50; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- Función de Comunicación con OpenRouter ---
+# --- Lógica de Comunicación ---
 def call_openrouter(prompt, key, model):
     try:
         response = requests.post(
@@ -33,95 +25,88 @@ def call_openrouter(prompt, key, model):
         )
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
-        else:
-            return f"Error: {response.status_code} - {response.text}"
+        return f"Error: {response.status_code}"
     except Exception as e:
-        return f"Error de conexión: {str(e)}"
+        return f"Error: {str(e)}"
 
-# --- Barra Lateral ---
+# --- Panel Lateral ---
 with st.sidebar:
-    st.title("🛡️ Panel de Control")
+    st.title("🇪🇸 Configuración España")
     api_key = st.text_input("OpenRouter API Key", type="password")
-    model_choice = st.selectbox("Cerebro Lógico", list(MODELS.keys()))
+    model_choice = st.selectbox("Modelo de Inteligencia", list(MODELS.keys()))
     selected_model = MODELS[model_choice]
     st.divider()
-    st.info("Configurado para: 12 Capítulos de 2200 palabras.")
+    st.info("Filtro: Mercado Amazon.es | 12 Capítulos | 2200 palabras/cap.")
 
-# --- Flujo de Trabajo ---
-st.title("🚀 Generador Editorial Abductivo")
+# --- Interfaz Principal ---
+st.title("🧠 KDP Abductor: Mercado España")
 
-# ETAPA 1: PREDICCIÓN
-st.header("1. Horizonte Temporal")
-col1, col2 = st.columns(2)
-with col1: mes = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
-with col2: anio = st.selectbox("Año", [2026, 2027, 2028])
+# 1. TENDENCIAS ORIENTADAS A ESPAÑA
+st.header("1. Predicción de Tendencias en España")
+col_m, col_a = st.columns(2)
+with col_m: mes = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
+with col_a: anio = st.selectbox("Año", [2026, 2027, 2028])
 
-if st.button("🔍 Predecir Tendencias Emergentes"):
-    prompt_trends = f"Actúa como analista de tendencias futuras. Predice 5 nichos específicos para KDP en {mes} de {anio}. Explica la justificación de cada uno."
-    trends = call_openrouter(prompt_trends, api_key, selected_model)
-    st.session_state['trends'] = trends
+if st.button("🔍 Detectar Tendencias en Amazon.es"):
+    prompt_es = f"""
+    Actúa como experto en el mercado editorial de España (Amazon.es). 
+    Predice 5 nichos de mercado emergentes para {mes} de {anio} en España.
+    Considera factores locales: leyes españolas, cultura, festividades, clima o tendencias tecnológicas en la península.
+    Explica el 'Hecho Sorprendente' de cada una.
+    """
+    trends = call_openrouter(prompt_es, api_key, selected_model)
+    st.session_state['trends_es'] = trends
 
-if 'trends' in st.session_state:
-    st.markdown("### Tendencias Detectadas")
-    st.info(st.session_state['trends'])
+if 'trends_es' in st.session_state:
+    st.info(st.session_state['trends_es'])
     
-    # ETAPA 2: ABDUCCIÓN Y PLAN
-    st.header("2. Análisis Abductivo y Plan Editorial")
-    chosen_trend = st.text_input("Ingresa la tendencia elegida:")
+    # 2. SELECCIÓN Y ABDUCCIÓN
+    st.header("2. Salto Abductivo")
+    tendencia_sel = st.text_input("Copia la tendencia española elegida:")
     
-    if st.button("🧠 Crear Plan de 12 Capítulos"):
+    if st.button("🧠 Generar Plan de 12 Capítulos"):
         prompt_plan = f"""
-        Aplica la lógica abductiva de Peirce para la tendencia: '{chosen_trend}'.
-        1. Identifica el Hecho Sorprendente (Anomalía de mercado).
-        2. Plantea la Hipótesis Abductiva.
-        3. Genera un PLAN EDITORIAL de 12 CAPÍTULOS.
-        
-        REGLAS DE FORMATO:
-        - Títulos: Mayúscula inicial solo en la primera palabra y nombres propios.
-        - Estructura: Título, Subtítulo, Síntesis y Tabla de contenidos.
+        Aplica la lógica abductiva de Peirce para la tendencia '{tendencia_sel}' en España.
+        Genera un plan de 12 capítulos con títulos que usen mayúscula inicial solo en la primera palabra.
+        Define la anomalía del mercado y la hipótesis de éxito.
         """
         plan = call_openrouter(prompt_plan, api_key, selected_model)
-        st.session_state['plan'] = plan
+        st.session_state['plan_es'] = plan
 
-if 'plan' in st.session_state:
+if 'plan_es' in st.session_state:
     st.divider()
-    st.markdown(st.session_state['plan'])
+    st.markdown(st.session_state['plan_es'])
 
-    # ETAPA 3: ESCRITURA
-    st.header("3. Redacción del Libro")
-    if st.button("✍️ Iniciar Escritura del Libro (12 Capítulos x 2200 palabras)"):
-        book_content = ""
-        prog_bar = st.progress(0)
-        status_text = st.empty()
-        
+    # 3. ESCRITURA PROFUNDA
+    st.header("3. Redacción del Manuscrito")
+    if st.button("✍️ Escribir Libro Completo (12 x 2200 palabras)"):
+        full_text = ""
+        bar = st.progress(0)
         for i in range(1, 13):
-            status_text.markdown(f"**Escribiendo Capítulo {i} de 12...** (Extensión objetivo: 2200 palabras)")
+            st.write(f"Redactando Capítulo {i}...")
             prompt_writing = f"""
-            Escribe el capítulo {i} basado en el plan: {st.session_state['plan']}.
+            Escribe el capítulo {i} basándote en el plan: {st.session_state['plan_es']}.
             
-            CONVENCIONES OBLIGATORIAS:
-            - Extensión: Aproximadamente 2200 palabras. Sé extremadamente detallado, profundo y analítico.
-            - Inicio: Comienza exactamente con '# Capítulo {i}: [Título del capítulo]'.
-            - Títulos: Mayúscula inicial solo en la primera palabra (salvo nombres propios).
-            - Puntuación: Usa únicamente comillas españolas (« »).
-            - No incluyas comentarios de IA, introducciones o despedidas del asistente.
-            - Idioma: Español formal y técnico.
+            REGLAS ESTRICTAS:
+            - Extensión: 2200 palabras (sé muy exhaustivo y analítico).
+            - Título: '# Capítulo {i}: [Título con mayúscula solo al inicio]'.
+            - Puntuación: Usa comillas españolas (« »).
+            - Estilo: Dirigido al público de España, evita localismos de otros países.
+            - Sin notas de IA.
             """
-            chapter_text = call_openrouter(prompt_writing, api_key, selected_model)
-            book_content += chapter_text + "\n\n"
-            prog_bar.progress(i / 12)
-            
-        st.session_state['full_book'] = book_content
-        st.success("¡Redacción finalizada con éxito!")
+            cap = call_openrouter(prompt_writing, api_key, selected_model)
+            full_text += cap + "\n\n"
+            bar.progress(i / 12)
+        
+        st.session_state['book_es'] = full_text
+        st.success("¡Libro para el mercado español finalizado!")
 
-# ETAPA 4: EXPORTACIÓN
-if 'full_book' in st.session_state:
+# 4. EXPORTACIÓN
+if 'book_es' in st.session_state:
     st.divider()
-    st.subheader("💾 Compilación Final")
-    
     st.download_button(
-        label="📥 Descargar Libro en Markdown (.md)",
-        data=st.session_state['full_book'],
-        file_name="manuscrito_kdp_abductivo.md",
+        label="📥 Descargar Libro para Amazon.es (.md)",
+        data=st.session_state['book_es'],
+        file_name="manuscrito_espana_kdp.md",
         mime="text/markdown"
     )
